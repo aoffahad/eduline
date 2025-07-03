@@ -21,8 +21,7 @@ class _ApiCallingScreenState extends State<ApiCallingScreen> {
 
   Future<void> _onRefresh() async {
     await postsController.fetchPosts();
-    // Optionally add a delay for refresh indicator
-    await Future.delayed(Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 600));
   }
 
   @override
@@ -30,27 +29,58 @@ class _ApiCallingScreenState extends State<ApiCallingScreen> {
     return Scaffold(
       backgroundColor: const Color(0xff11161f),
       appBar: AppBar(title: const Text('Data From API'), centerTitle: true),
-      body: Obx(() {
-        if (postsController.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (postsController.error.value.isNotEmpty) {
-          return Center(
-            child: Text(
-              'Error: Something went wrong while fetching data.',
-              style: const TextStyle(color: Colors.red),
-            ),
-          );
-        }
-        final postList = postsController.posts;
+      body: RefreshIndicator(
+        color: Colors.white,
+        backgroundColor: Colors.grey,
+        strokeWidth: 3.0,
+        onRefresh: _onRefresh,
+        child: Obx(() {
+          if (postsController.isLoading.value) {
+            // Still use Center because user can't pull while loading
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        return RefreshIndicator(
-          color: Colors.white,
-          backgroundColor: Colors.grey,
-          strokeWidth: 3.0,
-          onRefresh: _onRefresh,
-          child: ListView.builder(
+          final hasError = postsController.error.value.isNotEmpty;
+          final postList = postsController.posts;
+
+          if (hasError && postList.isEmpty) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.5,
+                  child: Center(
+                    child: Text(
+                      postsController.error.value,
+                      style: const TextStyle(color: Colors.red, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          if (postList.isEmpty) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.5,
+                  child: const Center(
+                    child: Text(
+                      "No posts available.",
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          return ListView.builder(
             itemCount: postList.length,
+            physics: const AlwaysScrollableScrollPhysics(),
             itemBuilder: (_, index) {
               final post = postList[index];
               return Padding(
@@ -81,9 +111,9 @@ class _ApiCallingScreenState extends State<ApiCallingScreen> {
                 ),
               );
             },
-          ),
-        );
-      }),
+          );
+        }),
+      ),
     );
   }
 }
